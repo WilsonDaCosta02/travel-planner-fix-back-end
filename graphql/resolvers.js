@@ -17,7 +17,6 @@ const resolvers = {
 
       const [rows] = await db.query(query, params);
 
-      // Konversi buffer ke string base64 (untuk foto)
       const users = rows.map(user => {
         return {
           ...user,
@@ -26,7 +25,17 @@ const resolvers = {
       });
 
       return users;
-    }
+    },
+
+    trips: async (_, { user_id }) => {
+  console.log('Fetching trips for user_id:', user_id);
+  const [rows] = await db.query(
+    'SELECT * FROM trip WHERE user_id = ? ORDER BY start_date',
+    [user_id]
+  );
+  console.log('Trips found:', rows);
+  return rows;
+}
   },
 
   Mutation: {
@@ -55,19 +64,17 @@ const resolvers = {
 
       const user = rows[0];
 
-      // Pakai data lama jika input kosong/null
       const newNama = nama ?? user.nama;
       const newNoHp = no_hp ?? user.no_hp;
       const newEmail = email ?? user.email;
       const newFoto = foto ?? user.foto;
 
-      // Hash password jika ada yang baru dikirim
       let newPassword;
       if (password && password.trim() !== '') {
         const saltRounds = 10;
         newPassword = await bcrypt.hash(password, saltRounds);
       } else {
-        newPassword = user.password; // gunakan password lama
+        newPassword = user.password;
       }
 
       await db.query(
@@ -104,8 +111,37 @@ const resolvers = {
       }
 
       return user;
+    },
+
+    createTrip: async (_, { user_id, title, location, remarks, start_date, end_date }) => {
+      const [result] = await db.query(
+        'INSERT INTO trip (user_id, title, location, remarks, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?)',
+        [user_id, title, location, remarks, start_date, end_date]
+      );
+
+      return {
+        id: result.insertId,
+        user_id,
+        title,
+        location,
+        remarks,
+        start_date,
+        end_date,
+      };
+    },
+
+    deleteTrip: async (_, { id }) => {
+      const [result] = await db.query('DELETE FROM trip WHERE id = ?', [id]);
+      return result.affectedRows > 0;
     }
-  }
+  },
+
+  // ✅ Resolver untuk mengubah tanggal jadi milisecond string
+  Trip: {
+  start_date: (trip) => new Date(trip.start_date).toISOString(),
+  end_date: (trip) => new Date(trip.end_date).toISOString(),
+}
+
 };
 
 module.exports = resolvers;

@@ -10,8 +10,19 @@ const typeDefs = gql`
     foto: String
   }
 
+  type Trip {
+    id: ID!
+    user_id: ID!
+    title: String!
+    location: String!
+    remarks: String
+    start_date: String!
+    end_date: String!
+  }
+
   type Query {
     users(id: ID): [User!]!
+    trips(user_id: ID!): [Trip!]!
   }
 
   type Mutation {
@@ -19,6 +30,10 @@ const typeDefs = gql`
   updateUser(id: ID!, nama: String, no_hp: String, email: String, password: String, foto: String): User!
   deleteUser(id: ID!): Boolean!
   login(email: String!, password: String!): User
+
+  createTrip(user_id: ID!, title: String!, location: String!, remarks: String, start_date: String!, end_date: String!): Trip!
+  deleteTrip(id: ID!): Boolean!
+
 }
 `;
 
