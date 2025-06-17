@@ -8,19 +8,19 @@ const resolvers = {
       let query, params;
 
       if (args.id) {
-        query = 'SELECT * FROM user WHERE id = ?';
+        query = "SELECT * FROM user WHERE id = ?";
         params = [args.id];
       } else {
-        query = 'SELECT * FROM user';
+        query = "SELECT * FROM user";
         params = [];
       }
 
       const [rows] = await db.query(query, params);
 
-      const users = rows.map(user => {
+      const users = rows.map((user) => {
         return {
           ...user,
-          foto: user.foto ? user.foto.toString('base64') : null,
+          foto: user.foto ? user.foto.toString("base64") : null,
         };
       });
 
@@ -28,14 +28,14 @@ const resolvers = {
     },
 
     trips: async (_, { user_id }) => {
-  console.log('Fetching trips for user_id:', user_id);
-  const [rows] = await db.query(
-    'SELECT * FROM trip WHERE user_id = ? ORDER BY start_date',
-    [user_id]
-  );
-  console.log('Trips found:', rows);
-  return rows;
-}
+      console.log("Fetching trips for user_id:", user_id);
+      const [rows] = await db.query(
+        "SELECT * FROM trip WHERE user_id = ? ORDER BY start_date",
+        [user_id]
+      );
+      console.log("Trips found:", rows);
+      return rows;
+    },
   },
 
   Mutation: {
@@ -44,7 +44,7 @@ const resolvers = {
       const hashedPassword = await bcrypt.hash(password, saltRounds);
 
       const [result] = await db.query(
-        'INSERT INTO user (nama, no_hp, email, password) VALUES (?, ?, ?, ?)',
+        "INSERT INTO user (nama, no_hp, email, password) VALUES (?, ?, ?, ?)",
         [nama, no_hp, email, hashedPassword]
       );
 
@@ -59,8 +59,8 @@ const resolvers = {
     },
 
     updateUser: async (_, { id, nama, no_hp, email, password, foto }) => {
-      const [rows] = await db.query('SELECT * FROM user WHERE id = ?', [id]);
-      if (!rows[0]) throw new Error('User not found');
+      const [rows] = await db.query("SELECT * FROM user WHERE id = ?", [id]);
+      if (!rows[0]) throw new Error("User not found");
 
       const user = rows[0];
 
@@ -70,7 +70,7 @@ const resolvers = {
       const newFoto = foto ?? user.foto;
 
       let newPassword;
-      if (password && password.trim() !== '') {
+      if (password && password.trim() !== "") {
         const saltRounds = 10;
         newPassword = await bcrypt.hash(password, saltRounds);
       } else {
@@ -78,7 +78,7 @@ const resolvers = {
       }
 
       await db.query(
-        'UPDATE user SET nama = ?, no_hp = ?, email = ?, password = ?, foto = ? WHERE id = ?',
+        "UPDATE user SET nama = ?, no_hp = ?, email = ?, password = ?, foto = ? WHERE id = ?",
         [newNama, newNoHp, newEmail, newPassword, newFoto, id]
       );
 
@@ -93,29 +93,34 @@ const resolvers = {
     },
 
     deleteUser: async (_, { id }) => {
-      const [result] = await db.query('DELETE FROM user WHERE id = ?', [id]);
+      const [result] = await db.query("DELETE FROM user WHERE id = ?", [id]);
       return result.affectedRows > 0;
     },
 
     login: async (_, { email, password }) => {
-      const [rows] = await db.query('SELECT * FROM user WHERE email = ?', [email]);
+      const [rows] = await db.query("SELECT * FROM user WHERE email = ?", [
+        email,
+      ]);
       const user = rows[0];
 
       if (!user) {
-        throw new GraphQLError('Email tidak ditemukan');
+        throw new GraphQLError("Email tidak ditemukan");
       }
 
       const passwordMatch = await bcrypt.compare(password, user.password);
       if (!passwordMatch) {
-        throw new GraphQLError('Password salah');
+        throw new GraphQLError("Password salah");
       }
 
       return user;
     },
 
-    createTrip: async (_, { user_id, title, location, remarks, start_date, end_date }) => {
+    createTrip: async (
+      _,
+      { user_id, title, location, remarks, start_date, end_date }
+    ) => {
       const [result] = await db.query(
-        'INSERT INTO trip (user_id, title, location, remarks, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?)',
+        "INSERT INTO trip (user_id, title, location, remarks, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?)",
         [user_id, title, location, remarks, start_date, end_date]
       );
 
@@ -130,18 +135,47 @@ const resolvers = {
       };
     },
 
+    updateTrip: async (
+      _,
+      { id, title, location, remarks, start_date, end_date }
+    ) => {
+      const [rows] = await db.query("SELECT * FROM trip WHERE id = ?", [id]);
+      const trip = rows[0];
+      if (!trip) throw new Error("Trip not found");
+
+      const newTitle = title ?? trip.title;
+      const newLocation = location ?? trip.location;
+      const newRemarks = remarks ?? trip.remarks;
+      const newStartDate = start_date ?? trip.start_date;
+      const newEndDate = end_date ?? trip.end_date;
+
+      await db.query(
+        "UPDATE trip SET title = ?, location = ?, remarks = ?, start_date = ?, end_date = ? WHERE id = ?",
+        [newTitle, newLocation, newRemarks, newStartDate, newEndDate, id]
+      );
+
+      return {
+        id,
+        user_id: trip.user_id,
+        title: newTitle,
+        location: newLocation,
+        remarks: newRemarks,
+        start_date: newStartDate,
+        end_date: newEndDate,
+      };
+    },
+
     deleteTrip: async (_, { id }) => {
-      const [result] = await db.query('DELETE FROM trip WHERE id = ?', [id]);
+      const [result] = await db.query("DELETE FROM trip WHERE id = ?", [id]);
       return result.affectedRows > 0;
-    }
+    },
   },
 
   // ✅ Resolver untuk mengubah tanggal jadi milisecond string
   Trip: {
-  start_date: (trip) => new Date(trip.start_date).toISOString(),
-  end_date: (trip) => new Date(trip.end_date).toISOString(),
-}
-
+    start_date: (trip) => new Date(trip.start_date).toISOString(),
+    end_date: (trip) => new Date(trip.end_date).toISOString(),
+  },
 };
 
 module.exports = resolvers;
