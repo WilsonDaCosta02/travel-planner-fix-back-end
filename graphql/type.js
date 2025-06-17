@@ -20,9 +20,17 @@ const typeDefs = gql`
     end_date: String!
   }
 
+    type DreamDestination {
+    id: ID!
+    user_id: ID!
+    destination: String!
+    image: String!
+  }
+
   type Query {
     users(id: ID): [User!]!
     trips(user_id: ID!): [Trip!]!
+    dreamDestinations(user_id: ID!): [DreamDestination!]!
   }
 
   type Mutation {
@@ -62,6 +70,19 @@ const typeDefs = gql`
     ): Trip!
 
     deleteTrip(id: ID!): Boolean!
+
+    createDreamDestination(
+    user_id: ID!
+    name: String! 
+    image: String!): DreamDestination!
+
+    updateDreamDestination(
+    id: ID!
+    name: String
+    image: String): DreamDestination!
+    
+    deleteDreamDestination(
+    id: ID!): Boolean!
   }
 `;
 

@@ -38,6 +38,14 @@ const resolvers = {
     },
   },
 
+  dreamDestinations: async (_, { user_id }) => {
+      const [rows] = await db.query(
+        "SELECT * FROM dream_destination WHERE user_id = ?",
+        [user_id]
+      );
+      return rows;
+    },
+
   Mutation: {
     createUser: async (_, { nama, no_hp, email, password }) => {
       const saltRounds = 10;
@@ -165,11 +173,41 @@ const resolvers = {
       };
     },
 
-    deleteTrip: async (_, { id }) => {
-      const [result] = await db.query("DELETE FROM trip WHERE id = ?", [id]);
+      deleteTrip: async (_, { id }) => {
+        const [result] = await db.query("DELETE FROM trip WHERE id = ?", [id]);
+        return result.affectedRows > 0;
+      },
+    },
+
+      createDreamDestination: async (_, { user_id, name, image }) => {
+      const [result] = await db.query(
+        "INSERT INTO dream_destination (user_id, destination, image) VALUES (?, ?, ?)",
+        [user_id, name, image]
+      );
+      return { id: result.insertId, user_id, name, image };
+    },
+
+    updateDreamDestination: async (_, { id, name, image }) => {
+      const [rows] = await db.query("SELECT * FROM dream_destination WHERE id = ?", [id]);
+      const dest = rows[0];
+      if (!dest) throw new Error("Dream destination not found");
+
+      const newName = name ?? dest.name;
+      const newImage = image ?? dest.image;
+
+      await db.query(
+        "UPDATE dream_destination SET name=?, image=? WHERE id=?",
+        [newName, newImage, id]
+      );
+
+      return { id, user_id: dest.user_id, name: newName, image: newImage };
+    },
+
+    deleteDreamDestination: async (_, { id }) => {
+      const [result] = await db.query("DELETE FROM dream_destination WHERE id = ?", [id]);
       return result.affectedRows > 0;
     },
-  },
+  
 
   // ✅ Resolver untuk mengubah tanggal jadi milisecond string
   Trip: {
