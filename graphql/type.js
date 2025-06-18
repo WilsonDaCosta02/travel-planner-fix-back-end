@@ -23,7 +23,7 @@ const typeDefs = gql`
     type DreamDestination {
     id: ID!
     user_id: ID!
-    destination: String!
+    name: String!
     image: String!
   }
 
@@ -40,6 +40,7 @@ const typeDefs = gql`
       email: String!
       password: String!
     ): User!
+
     updateUser(
       id: ID!
       nama: String
@@ -48,8 +49,15 @@ const typeDefs = gql`
       password: String
       foto: String
     ): User!
+    
     deleteUser(id: ID!): Boolean!
+
     login(email: String!, password: String!): User
+
+    forgotPassword(email: String!): String!
+
+    resetPassword(email: String!, password: String!): String!
+
 
     createTrip(
       user_id: ID!

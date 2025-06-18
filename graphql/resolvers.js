@@ -17,34 +17,34 @@ const resolvers = {
 
       const [rows] = await db.query(query, params);
 
-      const users = rows.map((user) => {
-        return {
-          ...user,
-          foto: user.foto ? user.foto.toString("base64") : null,
-        };
-      });
-
-      return users;
+      return rows.map(user => ({
+        ...user,
+        foto: user.foto ? user.foto.toString("base64") : null,
+      }));
     },
 
     trips: async (_, { user_id }) => {
-      console.log("Fetching trips for user_id:", user_id);
       const [rows] = await db.query(
         "SELECT * FROM trip WHERE user_id = ? ORDER BY start_date",
         [user_id]
       );
-      console.log("Trips found:", rows);
       return rows;
     },
-  },
 
-  dreamDestinations: async (_, { user_id }) => {
+    dreamDestinations: async (_, { user_id }) => {
       const [rows] = await db.query(
-        "SELECT * FROM dream_destination WHERE user_id = ?",
+        "SELECT * FROM dream_trip WHERE user_id = ?",
         [user_id]
       );
-      return rows;
+
+      return rows.map(dest => ({
+        id: dest.id,
+        user_id: dest.user_id,
+        name: dest.name,
+        image: dest.image ? dest.image.toString("base64") : null,
+      }));
     },
+  },
 
   Mutation: {
     createUser: async (_, { nama, no_hp, email, password }) => {
@@ -71,7 +71,6 @@ const resolvers = {
       if (!rows[0]) throw new Error("User not found");
 
       const user = rows[0];
-
       const newNama = nama ?? user.nama;
       const newNoHp = no_hp ?? user.no_hp;
       const newEmail = email ?? user.email;
@@ -106,27 +105,18 @@ const resolvers = {
     },
 
     login: async (_, { email, password }) => {
-      const [rows] = await db.query("SELECT * FROM user WHERE email = ?", [
-        email,
-      ]);
+      const [rows] = await db.query("SELECT * FROM user WHERE email = ?", [email]);
       const user = rows[0];
 
-      if (!user) {
-        throw new GraphQLError("Email tidak ditemukan");
-      }
+      if (!user) throw new GraphQLError("Email tidak ditemukan");
 
       const passwordMatch = await bcrypt.compare(password, user.password);
-      if (!passwordMatch) {
-        throw new GraphQLError("Password salah");
-      }
+      if (!passwordMatch) throw new GraphQLError("Password salah");
 
       return user;
     },
 
-    createTrip: async (
-      _,
-      { user_id, title, location, remarks, start_date, end_date }
-    ) => {
+    createTrip: async (_, { user_id, title, location, remarks, start_date, end_date }) => {
       const [result] = await db.query(
         "INSERT INTO trip (user_id, title, location, remarks, start_date, end_date) VALUES (?, ?, ?, ?, ?, ?)",
         [user_id, title, location, remarks, start_date, end_date]
@@ -143,10 +133,7 @@ const resolvers = {
       };
     },
 
-    updateTrip: async (
-      _,
-      { id, title, location, remarks, start_date, end_date }
-    ) => {
+    updateTrip: async (_, { id, title, location, remarks, start_date, end_date }) => {
       const [rows] = await db.query("SELECT * FROM trip WHERE id = ?", [id]);
       const trip = rows[0];
       if (!trip) throw new Error("Trip not found");
@@ -173,22 +160,27 @@ const resolvers = {
       };
     },
 
-      deleteTrip: async (_, { id }) => {
-        const [result] = await db.query("DELETE FROM trip WHERE id = ?", [id]);
-        return result.affectedRows > 0;
-      },
+    deleteTrip: async (_, { id }) => {
+      const [result] = await db.query("DELETE FROM trip WHERE id = ?", [id]);
+      return result.affectedRows > 0;
     },
 
-      createDreamDestination: async (_, { user_id, name, image }) => {
+    createDreamDestination: async (_, { user_id, name, image }) => {
       const [result] = await db.query(
-        "INSERT INTO dream_destination (user_id, destination, image) VALUES (?, ?, ?)",
+        "INSERT INTO dream_trip (user_id, name, image) VALUES (?, ?, ?)",
         [user_id, name, image]
       );
-      return { id: result.insertId, user_id, name, image };
+
+      return {
+        id: result.insertId,
+        user_id,
+        name,
+        image,
+      };
     },
 
     updateDreamDestination: async (_, { id, name, image }) => {
-      const [rows] = await db.query("SELECT * FROM dream_destination WHERE id = ?", [id]);
+      const [rows] = await db.query("SELECT * FROM dream_trip WHERE id = ?", [id]);
       const dest = rows[0];
       if (!dest) throw new Error("Dream destination not found");
 
@@ -196,20 +188,56 @@ const resolvers = {
       const newImage = image ?? dest.image;
 
       await db.query(
-        "UPDATE dream_destination SET name=?, image=? WHERE id=?",
+        "UPDATE dream_trip SET name = ?, image = ? WHERE id = ?",
         [newName, newImage, id]
       );
 
-      return { id, user_id: dest.user_id, name: newName, image: newImage };
+      return {
+        id,
+        user_id: dest.user_id,
+        name: newName,
+        image: newImage,
+      };
     },
 
     deleteDreamDestination: async (_, { id }) => {
-      const [result] = await db.query("DELETE FROM dream_destination WHERE id = ?", [id]);
+      const [result] = await db.query("DELETE FROM dream_trip WHERE id = ?", [id]);
       return result.affectedRows > 0;
     },
-  
 
-  // ✅ Resolver untuk mengubah tanggal jadi milisecond string
+    forgotPassword: async (_, { email }) => {
+      const [rows] = await db.query("SELECT * FROM user WHERE email = ?", [email]);
+      const user = rows[0];
+
+      if (!user) {
+        throw new GraphQLError("Email tidak ditemukan");
+      }
+
+      console.log(`Simulasi: Mengirim email reset password ke ${email}`);
+
+      return "Link reset password berhasil dikirim ke email kamu.";
+    },
+
+    resetPassword: async (_, { email, password }) => {
+        const [rows] = await db.query("SELECT * FROM user WHERE email = ?", [email]);
+        const user = rows[0];
+
+        if (!user) {
+          throw new GraphQLError("Email tidak ditemukan");
+        }
+
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+        await db.query("UPDATE user SET password = ? WHERE email = ?", [
+          hashedPassword,
+          email,
+        ]);
+
+        return "Password berhasil diperbarui.";
+      },
+  },
+
   Trip: {
     start_date: (trip) => new Date(trip.start_date).toISOString(),
     end_date: (trip) => new Date(trip.end_date).toISOString(),
