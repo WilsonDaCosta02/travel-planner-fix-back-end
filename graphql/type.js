@@ -20,8 +20,15 @@ const typeDefs = gql`
     end_date: String!
   }
 
-    type DreamDestination {
-    id: ID!
+  type H3Notif {
+  user_id: ID!
+  nama: String!
+  location: String!
+  title: String!
+  }
+
+  type DreamDestination {
+  id: ID!
     user_id: ID!
     name: String!
     image: String!
@@ -42,7 +49,7 @@ const typeDefs = gql`
     ): User!
 
     updateUser(
-      id: ID!
+    id: ID!
       nama: String
       no_hp: String
       email: String
@@ -91,6 +98,8 @@ const typeDefs = gql`
     
     deleteDreamDestination(
     id: ID!): Boolean!
+
+    triggerTestNotifH3: [H3Notif!]!
   }
 `;
 
