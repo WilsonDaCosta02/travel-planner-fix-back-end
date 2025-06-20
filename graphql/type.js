@@ -32,7 +32,7 @@ const typeDefs = gql`
     user_id: ID!
     name: String!
     image: String!
-  }
+}
 
   type Query {
     users(id: ID): [User!]!
